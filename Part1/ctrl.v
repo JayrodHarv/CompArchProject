@@ -53,50 +53,28 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel);
   always @(present_state, rst_f)
   begin
     case(present_state)
-      start0:
-        next_state = start1;
-      start1:
-	  if (rst_f == 1'b0) 
-        next_state = start1;
-	 else
-         next_state = fetch;
-      fetch:
-        next_state = decode;
-      decode:
-        next_state = execute;
-      execute:
-        next_state = mem;
-      mem:
-        next_state = writeback;
-      writeback:
-        next_state = fetch;
-      default:
-        next_state = start1;
+      start0:     next_state = start1;
+      start1:     if (rst_f == 1'b0) next_state = start1;
+	                else next_state = fetch;
+      fetch:      next_state = decode;
+      decode:     next_state = execute;
+      execute:    next_state = mem;
+      mem:        next_state = writeback;
+      writeback:  next_state = fetch;
+      default:    next_state = start1;
     endcase
   end
 
   always @(present_state, opcode)
   begin
-
-    rf_we = 1'b0;
-    wb_sel = 1'b0;
-    alu_op = 4'b0000;
-
     case (present_state)
       execute:
       begin
         case (opcode)
-          REG_OP:
-            alu_op = 4'b0001;
-          
-          REG_IM:
-            alu_op = 4'b0011;
-          
-          NOOP:
-            alu_op = 4'b0000;
-
-          default:
-            alu_op = 4'b0000;
+          REG_OP:   alu_op = 4'b0001;
+          REG_IM:   alu_op = 4'b0011;
+          NOOP:     alu_op = 4'b0000;
+          default:  alu_op = 4'b0000;
         endcase
       end
 
@@ -104,16 +82,11 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel);
       begin
         case (opcode)
           REG_OP,REG_IM:
-        begin
-          rf_we = 1'b1;
-          wb_sel = 1'b0;
-        end
-
-        default:
-        begin
-          rf_we = 1'b0;
-        end
-
+          begin
+            rf_we = 1'b1;
+            wb_sel = 1'b0;
+          end
+          default: rf_we = 1'b0;
         endcase
       end
     endcase
