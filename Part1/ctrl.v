@@ -86,7 +86,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel);
             rf_we = 1'b1;
             wb_sel = 1'b0;
           end
-          default: rf_we = 1'b0;
+          default: rf_we = 1'b1;
         endcase
       end
     endcase
