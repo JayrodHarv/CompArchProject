@@ -15,7 +15,7 @@ module sisc_tb;
   //          .rst_f (rst_f),
   //          .ir    (ir));
  
-  sisc uut ( clk, rst_f);
+  sisc uut (clk, rst_f);
 
   // clock driver
   initial

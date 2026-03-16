@@ -3,7 +3,7 @@
 
 `timescale 1ns/100ps
 
-module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel);
+module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst, pc_write, pc_sel, ir_load);
 
   /* Declare the ports listed above as inputs or outputs.  Note that this is
      only the signals for part 1.  You will be adding signals for parts 2,
@@ -13,6 +13,11 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel);
   input [3:0] opcode, mm, stat;
   output reg rf_we, wb_sel;
   output reg [3:0] alu_op;
+  output reg br_sel;
+  output reg pc_rst;
+  output reg pc_write;
+  output reg pc_sel;
+  output reg ir_load;
   
   // state parameter declarations
   
