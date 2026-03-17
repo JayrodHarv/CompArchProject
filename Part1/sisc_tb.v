@@ -13,7 +13,12 @@ module sisc_tb;
   // component instantiation
   // "uut" stands for "Unit Under Test"
  
-  sisc uut ( clk, rst_f, ir);
+  sisc uut (clk, rst_f, ir);
+
+  initial begin
+    $dumpfile("dump.vcd");
+    $dumpvars(0, sisc_tb);
+  end
 
   // clock driver
   initial

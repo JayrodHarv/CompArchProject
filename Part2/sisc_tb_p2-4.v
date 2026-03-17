@@ -17,6 +17,11 @@ module sisc_tb;
  
   sisc uut (clk, rst_f);
 
+  initial begin
+    $dumpfile("dump.vcd");
+    $dumpvars(0, sisc_tb);
+  end
+
   // clock driver
   initial
   begin
