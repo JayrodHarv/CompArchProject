@@ -70,15 +70,63 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
     endcase
   end
 
-  always @(present_state, opcode)
+  always @(*)
   begin
+
+    // Defaults (set everything to zero)
+      ir_load  = 0;
+      pc_write = 0;
+      pc_sel   = 0;
+      br_sel   = 0;
+      rf_we    = 0;
+      alu_op   = 4'b0000;
+      wb_sel   = 0;
+      pc_rst   = 0;
+
     case (present_state)
+      fetch:
+      begin
+        ir_load  = 1;
+        pc_write = 1;
+        pc_sel   = 0;
+      end
+
+      decode:
+      begin
+        // everything stays default (all 0)
+      end
+
       execute:
       begin
         case (opcode)
+          NOOP:     alu_op = 4'b0000;
           REG_OP:   alu_op = 4'b0001;
           REG_IM:   alu_op = 4'b0011;
-          NOOP:     alu_op = 4'b0000;
+
+          // Branch Instructions
+
+          // Branch if any of CC bits are 1 and and cooresponding bits in statreg are 1 (CC & STAT != 0)
+          BRA, BRR: 
+          begin
+            if ((mm & stat) != 0)
+            begin
+              pc_sel   = 1;
+              pc_write = 1;
+              br_sel = 1;
+            end
+          end
+
+          // Branch NOT taken if status register is high for any CC bit set to one (CC & STAT == 0)
+          BNE, BNR:
+          begin
+            if ((mm & stat) == 0)
+            begin
+              pc_sel   = 1;
+              pc_write = 1;
+              br_sel = 1;
+            end
+          end
+            
           default:  alu_op = 4'b0000;
         endcase
       end
@@ -91,7 +139,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
             rf_we = 1'b1;
             wb_sel = 1'b0;
           end
-          default: rf_we = 1'b1;
+          default: rf_we = 1'b0;
         endcase
       end
     endcase

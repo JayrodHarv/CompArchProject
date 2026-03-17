@@ -18,7 +18,6 @@ module sisc (
   wire          rf_we;      // register file write enable from control unit to register file
   wire [3:0]    stat_en;    // status register enable from control unit to status register
   wire [3:0]    stat;       // Wire connecting the status register to the control circuit
-  wire [3:0]    mm;         // Something with memory that we don't care about right now
 
   wire [31:0]   rsa, rsb;   // outputs from register file
   wire [3:0]    cc;         // condition code from alu to status register
@@ -40,12 +39,12 @@ module sisc (
 	wire 					pc_sel;
 	wire					ir_load;
 
-
   // ---------------------------------
   // instruction decoding
   // ---------------------------------
   wire [3:0]    opcode      = instr[31:28];    // opcode
   wire [3:0]    funct       = instr[27:24];    // ALU function code
+	wire [3:0]		mm 					= instr[27:24];		 // Condition code (CC)
   wire [3:0]    write_reg   = instr[23:20];    // write register
   wire [3:0]    rsa_id      = instr[19:16];    // Source register A
   wire [3:0]    rsb_id      = instr[15:12];    // Source register B
@@ -114,7 +113,7 @@ module sisc (
 	  clk,
 	  rst_f,
 	  opcode,
-	  mm,  // ignore for now
+	  mm,
 	  stat,
 	  rf_we,
 	  alu_op,
