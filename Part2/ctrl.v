@@ -5,154 +5,165 @@
 
 module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst, pc_write, pc_sel, ir_load);
 
-  /* Declare the ports listed above as inputs or outputs.  Note that this is
-     only the signals for part 1.  You will be adding signals for parts 2,
-     2, and 4. */
+	input clk, rst_f;
+	input [3:0] opcode, mm, stat;
+	output reg rf_we, wb_sel;
+	output reg [3:0] alu_op;
+	output reg br_sel;
+	output reg pc_rst;
+	output reg pc_write;
+	output reg pc_sel;
+	output reg ir_load;
   
-  input clk, rst_f;
-  input [3:0] opcode, mm, stat;
-  output reg rf_we, wb_sel;
-  output reg [3:0] alu_op;
-  output reg br_sel;
-  output reg pc_rst;
-  output reg pc_write;
-  output reg pc_sel;
-  output reg ir_load;
-  
-  // state parameter declarations
-  
-  parameter start0 = 0, start1 = 1, fetch = 2, decode = 3, execute = 4, mem = 5, writeback = 6;
-   
-  // opcode parameter declarations
-  
-  parameter NOOP = 0, REG_OP = 1, REG_IM = 2, SWAP = 3, BRA = 4, BRR = 5, BNE = 6, BNR = 7;
-  parameter JPA = 8, JPR = 9, LOD = 10, STR = 11, CALL = 12, RET = 13, HLT = 15;
+	// state parameter declarations
 	
-  // addressing modes
-  
-  parameter AM_IMM = 8;
+	parameter start0 = 0, start1 = 1, fetch = 2, decode = 3, execute = 4, mem = 5, writeback = 6;
+	
+	// opcode parameter declarations
+	
+	parameter NOOP = 0, REG_OP = 1, REG_IM = 2, SWAP = 3, BRA = 4, BRR = 5, BNE = 6, BNR = 7;
+	parameter JPA = 8, JPR = 9, LOD = 10, STR = 11, CALL = 12, RET = 13, HLT = 15;
+		
+	// addressing modes
+	
+	parameter AM_IMM = 8;
 
-  // state register and next state signal
-  
-  reg [2:0]  present_state, next_state;
+	// state register and next state signal
+	
+	reg [2:0]  present_state, next_state;
 
-  // initial procedure to initialize the present state to 'start0'.
+	// initial procedure to initialize the present state to 'start0'.
 
-  initial
-    present_state = start0;
+	initial
+		present_state = start0;
 
-  /* Procedure that progresses the fsm to the next state on the positive edge of 
-     the clock, OR resets the state to 'start1' on the negative edge of rst_f. 
-     Notice that the computer is reset when rst_f is low, not high. */
+	/* Procedure that progresses the fsm to the next state on the positive edge of 
+		the clock, OR resets the state to 'start1' on the negative edge of rst_f. 
+		Notice that the computer is reset when rst_f is low, not high. */
 
-  always @(posedge clk, negedge rst_f)
-  begin
-    if (rst_f == 1'b0)
-      present_state <= start1;
-    else
-      present_state <= next_state;
-  end
-  
-  /* The following combinational procedure determines the next state of the fsm. */
+	always @(posedge clk, negedge rst_f)
+	begin
+		if (rst_f == 1'b0)
+			present_state <= start1;
+		else
+			present_state <= next_state;
+	end
+	
+	/* The following combinational procedure determines the next state of the fsm. */
 
-  always @(present_state, rst_f)
-  begin
-    case(present_state)
-      start0:     next_state = start1;
-      start1:     if (rst_f == 1'b0) next_state = start1;
-	                else next_state = fetch;
-      fetch:      next_state = decode;
-      decode:     next_state = execute;
-      execute:    next_state = mem;
-      mem:        next_state = writeback;
-      writeback:  next_state = fetch;
-      default:    next_state = start1;
-    endcase
-  end
+	always @(present_state, rst_f)
+	begin
+		case(present_state)
+			start0:     next_state = start1;
+			start1:     if (rst_f == 1'b0) next_state = start1;
+									else next_state = fetch;
+			fetch:      next_state = decode;
+			decode:     next_state = execute;
+			execute:    next_state = mem;
+			mem:        next_state = writeback;
+			writeback:  next_state = fetch;
+			default:    next_state = start1;
+		endcase
+	end
 
-  always @(*)
-  begin
+	always @(*)
+	begin
 
-    // Defaults (set everything to zero)
-      ir_load  = 0;
-      pc_write = 0;
-      pc_sel   = 0;
-      br_sel   = 0;
-      rf_we    = 0;
-      alu_op   = 4'b0000;
-      wb_sel   = 0;
-      pc_rst   = 0;
+		// Defaults (set everything to zero)
+		ir_load  = 0;
+		pc_write = 0;
+		pc_sel   = 0;
+		br_sel   = 0;
+		rf_we    = 0;
+		alu_op   = 4'b0000;
+		wb_sel   = 0;
+		pc_rst   = 0;
 
-    case (present_state)
-      fetch:
-      begin
-        ir_load  = 1;
-        pc_write = 1;
-        pc_sel   = 0;
-      end
+		case (present_state)
 
-      decode:
-      begin
-        // everything stays default (all 0)
-      end
+			start1:
+			begin
+				pc_rst = 1;
+			end
 
-      execute:
-      begin
-        case (opcode)
-          NOOP:     alu_op = 4'b0000;
-          REG_OP:   alu_op = 4'b0001;
-          REG_IM:   alu_op = 4'b0011;
+			fetch:
+			begin
+				pc_write = 1;
+				pc_sel   = 0;
+			end
 
-          // Branch Instructions
+			decode:
+			begin
+				ir_load  = 1;
+			end
 
-          // Branch if any of CC bits are 1 and and cooresponding bits in statreg are 1 (CC & STAT != 0)
-          BRA, BRR: 
-          begin
-            if ((mm & stat) != 0)
-            begin
-              pc_sel   = 1;
-              pc_write = 1;
-              br_sel = 1;
-            end
-          end
+			execute:
+			begin
+				case (opcode)
+					NOOP:     alu_op = 4'b0000;
+					REG_OP:   alu_op = 4'b0001;
+					REG_IM:   alu_op = 4'b0011;
 
-          // Branch NOT taken if status register is high for any CC bit set to one (CC & STAT == 0)
-          BNE, BNR:
-          begin
-            if ((mm & stat) == 0)
-            begin
-              pc_sel   = 1;
-              pc_write = 1;
-              br_sel = 1;
-            end
-          end
-            
-          default:  alu_op = 4'b0000;
-        endcase
-      end
+					// Branch Instructions
 
-      writeback:
-      begin
-        case (opcode)
-          REG_OP,REG_IM:
-          begin
-            rf_we = 1'b1;
-            wb_sel = 1'b0;
-          end
-          default: rf_we = 1'b0;
-        endcase
-      end
-    endcase
-  end
+					BRA:
+					begin
+						if ((mm & stat) != 0)
+						begin
+							pc_sel=1; pc_write=1; br_sel=1;
+						end
+					end
 
-  // Halt on HLT instruction
-  
-  always @ (opcode)
-  begin
-    if (opcode == HLT)
-    begin 
-      #5 $display ("Halt."); //Delay 5 ns so $monitor will print the halt instruction
-      $stop;
-    end
-  end
+					BRR:
+					begin
+						if ((mm & stat) != 0)
+						begin
+							pc_sel=1; pc_write=1; br_sel=0;
+						end
+					end
+
+					BNE:
+					begin
+						if ((mm & stat) == 0)
+						begin
+							pc_sel=1; pc_write=1; br_sel=1;
+						end
+					end
+
+					BNR:
+					begin
+						if ((mm & stat) == 0)
+						begin
+							pc_sel=1; pc_write=1; br_sel=0;
+						end
+					end
+						
+					default:  alu_op = 4'b0000;
+				endcase
+			end
+
+			writeback:
+			begin
+				case (opcode)
+					REG_OP,REG_IM:
+					begin
+						rf_we = 1'b1;
+						wb_sel = 1'b0;
+					end
+					default: rf_we = 1'b0;
+				endcase
+			end
+		endcase
+	end
+
+	// Halt on HLT instruction
+	
+	always @ (opcode)
+	begin
+		if (opcode == HLT)
+		begin 
+		#5 $display ("Halt."); //Delay 5 ns so $monitor will print the halt instruction
+		$stop;
+		end
+	end
 endmodule

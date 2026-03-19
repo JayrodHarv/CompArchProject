@@ -32,7 +32,7 @@ module br (pc_out, imm, br_sel, br_addr);
  
   reg   [15:0] br_in;
    
-  always @ (pc_out, br_sel)
+  always @ (pc_out, imm, br_sel)
   begin
     if (br_sel == 1'b1)
       br_in <= 16'h0000;
