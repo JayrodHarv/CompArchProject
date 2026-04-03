@@ -90,11 +90,61 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 			begin
 				pc_write = 1;
 				pc_sel   = 0;
+				ir_load  = 1;
 			end
 
 			decode:
 			begin
-				ir_load  = 1;
+				case (opcode)
+				// Branch Instructions
+					BRA:
+					if ((mm & stat) != 0)
+					begin
+						pc_sel = 1;
+						pc_write = 1;
+						br_sel = 1;
+					end
+
+					BRR:
+					if ((mm & stat) != 0)
+					begin
+						pc_sel = 1;
+						pc_write = 1;
+						br_sel = 0;
+					end
+
+					BNE:
+					if ((mm & stat) == 0)
+					begin
+						pc_sel = 1;
+						pc_write = 1;
+						br_sel = 1;
+					end
+
+					BNR:
+					if ((mm & stat) == 0)
+					begin
+						pc_sel = 1;
+						pc_write = 1;
+						br_sel = 0;
+					end
+					
+					default:
+					begin
+						pc_sel = 0;
+						pc_write = 0;
+						br_sel = 0;
+					end
+				endcase
+			end
+
+			mem:
+			begin
+				case (opcode)
+					REG_OP:			alu_op = 4'b0000;
+					REG_IM:			alu_op = 4'b0010;
+					default:		alu_op = 4'b0000;
+				endcase
 			end
 
 			execute:
@@ -104,40 +154,6 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 					REG_OP:   alu_op = 4'b0001;
 					REG_IM:   alu_op = 4'b0011;
 
-					// Branch Instructions
-
-					BRA:
-					begin
-						if ((mm & stat) != 0)
-						begin
-							pc_sel=1; pc_write=1; br_sel=1;
-						end
-					end
-
-					BRR:
-					begin
-						if ((mm & stat) != 0)
-						begin
-							pc_sel=1; pc_write=1; br_sel=0;
-						end
-					end
-
-					BNE:
-					begin
-						if ((mm & stat) == 0)
-						begin
-							pc_sel=1; pc_write=1; br_sel=1;
-						end
-					end
-
-					BNR:
-					begin
-						if ((mm & stat) == 0)
-						begin
-							pc_sel=1; pc_write=1; br_sel=0;
-						end
-					end
-						
 					default:  alu_op = 4'b0000;
 				endcase
 			end
@@ -145,12 +161,13 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 			writeback:
 			begin
 				case (opcode)
-					REG_OP,REG_IM:
-					begin
-						rf_we = 1'b1;
+					REG_OP,REG_IM:	rf_we = 1'b1;
+					default:
+					begin 
+						rf_we = 1'b0;
 						wb_sel = 1'b0;
+						alu_op = 4'b0000;
 					end
-					default: rf_we = 1'b0;
 				endcase
 			end
 		endcase
