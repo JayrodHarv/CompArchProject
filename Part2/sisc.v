@@ -13,6 +13,7 @@ module sisc (
 	// ---------------------------------
 	// declare all internal wires here
 	// ---------------------------------
+	wire [3:0] 	alu_op;     // ALU operation code from control unit to ALU
 	wire        wb_sel;     // writeback select from control unit to writeback mux
 	wire        rf_we;      // register file write enable from control unit to register file
 	wire [3:0]  stat_en;	// status register enable from control unit to status register
@@ -48,7 +49,6 @@ module sisc (
 	wire [3:0]	rt			= instr[15:12];		// Source Register B
 
 	wire [11:0] funct		= instr[11:0];		// ALU function code
-	wire [3:0]	alu_op		= funct[3:0];		// ALU operation code
 
 	wire [15:0]	imm			= instr[15:0];		// Immediate Value
 	wire [15:0] target		= instr[15:0];		// Memory Address 	  	
@@ -97,7 +97,7 @@ module sisc (
 		imm,
 		cc[3],  // carry in from status register
 		alu_op,
-		alu_op, // give alu_op inplace of funct for now
+		funct, // give alu_op inplace of funct for now
 		alu_out,
 		cc,
 		stat_en
