@@ -97,7 +97,7 @@ module sisc (
 		imm,
 		cc[3],  // carry in from status register
 		alu_op,
-		funct,
+		mff,
 		alu_out,
 		cc,
 		stat_en
@@ -149,16 +149,19 @@ module sisc (
 	);
 
 	initial begin
-    $monitor(
-        "| Time=%0d | \n\
-| PC=%h | PC_SEL=%b | PC_WRITE=%b | STAT=%b | BR_SEL=%b | BR_ADDR=%h | \n\
-| IR=%h | IR_LOAD=%b | RS=%h | RT=%h | RD=%h | MFF=%b | OPCODE=%b | \n\
-| R1=%h | R2=%h | R3=%h | R4=%h | R5=%h | RF_WE=%b | \n\
-| ALU_OP=%b | \n",
-          $time, pc_out, pc_sel, pc_write, stat, br_sel, br_addr,
-          instr, ir_load, rsa, rsb, rd, mff, opcode,
-          rf0.ram_array[1], rf0.ram_array[2], rf0.ram_array[3], rf0.ram_array[4], rf0.ram_array[5], rf_we,
-          alu_op
-    );
+		$monitor("Time = %0d IR = %h PC = %h R1 = %h R2 = %h R3 = %h R4 = %h R5 = %h ALU_OP = %h BR_SEL = %b PC_WRITE = %b PC_SEL = %b",
+			$time, instr, pc_out, rf0.ram_array[1], rf0.ram_array[2], rf0.ram_array[3], rf0.ram_array[4], rf0.ram_array[5], alu_op, br_sel, pc_write, pc_sel
+		);
+//     $monitor(
+//         "| Time=%0d | \n\
+// | PC=%h | PC_SEL=%b | PC_WRITE=%b | STAT=%b | BR_SEL=%b | BR_ADDR=%h | \n\
+// | IR=%h | IR_LOAD=%b | RS=%h | RT=%h | RD=%h | MFF=%b | OPCODE=%b | \n\
+// | R1=%h | R2=%h | R3=%h | R4=%h | R5=%h | RF_WE=%b | \n\
+// | ALU_OP=%b | \n",
+//           $time, pc_out, pc_sel, pc_write, stat, br_sel, br_addr,
+//           instr, ir_load, rsa, rsb, rd, mff, opcode,
+//           rf0.ram_array[1], rf0.ram_array[2], rf0.ram_array[3], rf0.ram_array[4], rf0.ram_array[5], rf_we,
+//           alu_op
+//     );
 end
 endmodule

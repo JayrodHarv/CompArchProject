@@ -84,9 +84,9 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 
 			fetch:
 			begin
-				pc_write = 1;
-				// pc_sel   = 0;
 				ir_load  = 1;
+				pc_write = 1;
+				pc_sel   = 0;
 			end
 
 			decode:
@@ -94,41 +94,41 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 				case (opcode)
 					// Branch Instructions
 					BRA:
-					if ((mm & stat) != 0)
+					if (|(mm & stat))
 					begin
 						pc_sel = 1;
-						// pc_write = 1;
+						pc_write = 1;
 						br_sel = 1;
 					end
 
 					BRR:
-					if ((mm & stat) != 0)
+					if (|(mm & stat))
 					begin
 						pc_sel = 1;
-						// pc_write = 1;
+						pc_write = 1;
 						br_sel = 0;
 					end
 
 					BNE:
-					if ((mm & stat) == 0)
+					if (!(|(mm & stat)))
 					begin
 						pc_sel = 1;
-						// pc_write = 1;
+						pc_write = 1;
 						br_sel = 1;
 					end
 
 					BNR:
-					if ((mm & stat) == 0)
+					if (!(|(mm & stat)))
 					begin
 						pc_sel = 1;
-						// pc_write = 1;
+						pc_write = 1;
 						br_sel = 0;
 					end
 					
 					default:
 					begin
 						pc_sel = 0;
-						// pc_write = 0;
+						pc_write = 0;
 						br_sel = 0;
 					end
 				endcase
