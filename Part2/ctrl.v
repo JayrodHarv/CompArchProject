@@ -10,10 +10,12 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 	output reg rf_we, wb_sel;
 	output reg [3:0] alu_op;
 	output reg br_sel;
-	output reg pc_rst;
+	output pc_rst;
 	output reg pc_write;
 	output reg pc_sel;
 	output reg ir_load;
+
+	assign pc_rst = ~rst_f; // pc_rst is the inverse of rst_f
   
 	// state parameter declarations
 	
@@ -66,7 +68,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 		endcase
 	end
 
-	always @(*)
+	always @(present_state, opcode)
 	begin
 
 		// Defaults (set everything to zero)
@@ -77,31 +79,25 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 		rf_we    = 0;
 		alu_op   = 4'b0000;
 		wb_sel   = 0;
-		pc_rst   = 0;
 
 		case (present_state)
-
-			start1:
-			begin
-				pc_rst = 1;
-			end
 
 			fetch:
 			begin
 				pc_write = 1;
-				pc_sel   = 0;
+				// pc_sel   = 0;
 				ir_load  = 1;
 			end
 
 			decode:
 			begin
 				case (opcode)
-				// Branch Instructions
+					// Branch Instructions
 					BRA:
 					if ((mm & stat) != 0)
 					begin
 						pc_sel = 1;
-						pc_write = 1;
+						// pc_write = 1;
 						br_sel = 1;
 					end
 
@@ -109,7 +105,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 					if ((mm & stat) != 0)
 					begin
 						pc_sel = 1;
-						pc_write = 1;
+						// pc_write = 1;
 						br_sel = 0;
 					end
 
@@ -117,7 +113,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 					if ((mm & stat) == 0)
 					begin
 						pc_sel = 1;
-						pc_write = 1;
+						// pc_write = 1;
 						br_sel = 1;
 					end
 
@@ -125,14 +121,14 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 					if ((mm & stat) == 0)
 					begin
 						pc_sel = 1;
-						pc_write = 1;
+						// pc_write = 1;
 						br_sel = 0;
 					end
 					
 					default:
 					begin
 						pc_sel = 0;
-						pc_write = 0;
+						// pc_write = 0;
 						br_sel = 0;
 					end
 				endcase

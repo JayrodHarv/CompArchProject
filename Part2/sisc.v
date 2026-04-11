@@ -48,7 +48,7 @@ module sisc (
 	wire [3:0] 	rs			= instr[19:16];		// Source Register A
 	wire [3:0]	rt			= instr[15:12];		// Source Register B
 
-	wire [11:0] funct		= instr[11:0];		// ALU function code
+	wire [3:0] funct		= instr[3:0];		// ALU function code
 
 	wire [15:0]	imm			= instr[15:0];		// Immediate Value
 	wire [15:0] target		= instr[15:0];		// Memory Address 	  	
@@ -97,7 +97,7 @@ module sisc (
 		imm,
 		cc[3],  // carry in from status register
 		alu_op,
-		funct, // give alu_op inplace of funct for now
+		funct,
 		alu_out,
 		cc,
 		stat_en
@@ -149,9 +149,16 @@ module sisc (
 	);
 
 	initial begin
-		$monitor(
-			"Time=%0d, IR=%h, R1=%h, R2=%h, R3=%h, R4=%h, R5=%h, ALU_OP=%h, BR_SEL=%h, PC_WRITE=%b, PC_SEL=%b STAT_REG=%b",
-			$time, instr, rf0.ram_array[1], rf0.ram_array[2], rf0.ram_array[3], rf0.ram_array[4], rf0.ram_array[5], 
-			alu_op, br_sel, pc_write, pc_sel, stat);
-	end
+    $monitor(
+        "| Time=%0d | \n\
+| PC=%h | PC_SEL=%b | PC_WRITE=%b | STAT=%b | BR_SEL=%b | BR_ADDR=%h | \n\
+| IR=%h | IR_LOAD=%b | RS=%h | RT=%h | RD=%h | MFF=%b | OPCODE=%b | \n\
+| R1=%h | R2=%h | R3=%h | R4=%h | R5=%h | RF_WE=%b | \n\
+| ALU_OP=%b | \n",
+          $time, pc_out, pc_sel, pc_write, stat, br_sel, br_addr,
+          instr, ir_load, rsa, rsb, rd, mff, opcode,
+          rf0.ram_array[1], rf0.ram_array[2], rf0.ram_array[3], rf0.ram_array[4], rf0.ram_array[5], rf_we,
+          alu_op
+    );
+end
 endmodule
