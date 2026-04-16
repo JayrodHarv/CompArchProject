@@ -57,8 +57,75 @@ module sisc (
 	// component instantiation goes here
 	// ---------------------------------
 
+	// control unit (CTRL)
+	ctrl u1 (
+		clk,
+		rst_f,
+		opcode,
+		mff,
+		stat,
+		rf_we,
+		alu_op,
+		wb_sel,
+		br_sel,
+		pc_rst,
+		pc_write,
+		pc_sel,
+		ir_load
+	);
+
+	// register file
+	rf u2 (
+		clk,
+		rs,
+		rt,
+		rd,
+		wb_data,
+		rf_we,
+		rsa,
+		rsb
+	);
+
+	// Arithmetic Logic Unit (ALU)
+	alu u3 (
+		clk,
+		rsa,
+		rsb,
+		imm,
+		cc[3],  // carry in from status register
+		alu_op,
+		mff,
+		alu_out,
+		cc,
+		stat_en
+	);
+
+	// writeback mux
+	mux32 u5 (
+		alu_out,
+		0,
+		wb_sel,
+		wb_data
+	);
+
+	// status register (STATREG)
+	statreg u6 (
+		clk,
+		cc,
+		stat_en,
+		stat
+	);
+
+	// Instruction Register (IR)
+	ir u9 (
+		clk,
+		ir_load,
+		instr_out,
+		instr
+	);
+
 	// Program Counter (PC)
-	pc pc0 (
+	pc u10 (
 		clk,
 		br_addr,
 		pc_sel,
@@ -81,76 +148,9 @@ module sisc (
 		instr_out
 	);
 
-	// Instruction Register (IR)
-	ir ir0 (
-		clk,
-		ir_load,
-		instr_out,
-		instr
-	);
-
-	// Arithmetic Logic Unit (ALU)
-	alu alu0 (
-		clk,
-		rsa,
-		rsb,
-		imm,
-		cc[3],  // carry in from status register
-		alu_op,
-		mff,
-		alu_out,
-		cc,
-		stat_en
-	  );
-
-	// status register (STATREG)
-	statreg statreg0 (
-		clk,
-		cc,
-		stat_en,
-		stat
-	  );
-
-	// control unit (CTRL)
-	ctrl ctrl0 (
-		clk,
-		rst_f,
-		opcode,
-		mff,
-		stat,
-		rf_we,
-		alu_op,
-		wb_sel,
-		br_sel,
-		pc_rst,
-		pc_write,
-		pc_sel,
-		ir_load
-	);
-
-	// writeback mux
-	mux32 mux0 (
-		alu_out,
-		0,
-		wb_sel,
-		wb_data
-	);
-
-	// register file
-	rf rf0 (
-		clk,
-		rs,
-		rt,
-		rd,
-		wb_data,
-		rf_we,
-		rsa,
-		rsb
-	);
-
 	initial begin
 		$monitor("Time = %0d IR = %h PC = %h R1 = %h R2 = %h R3 = %h R4 = %h R5 = %h ALU_OP = %h BR_SEL = %b PC_WRITE = %b PC_SEL = %b",
-			$time, instr, pc_out, rf0.ram_array[1], rf0.ram_array[2], rf0.ram_array[3], rf0.ram_array[4], rf0.ram_array[5], alu_op, br_sel, pc_write, pc_sel
+			$time, instr, pc_out, u2.ram_array[1], u2.ram_array[2], u2.ram_array[3], u2.ram_array[4], u2.ram_array[5], alu_op, br_sel, pc_write, pc_sel
 		);
 //     $monitor(
 //         "| Time=%0d | \n\
