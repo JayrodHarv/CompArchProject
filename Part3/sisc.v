@@ -45,6 +45,8 @@ module sisc (
 	wire [15:0] mux16_out;
 	wire 		dm_we;
 	wire 		mm_sel;
+	wire		rb_sel;
+	wire [3:0]  rb;
 	wire [31:0] read_data;
 
 	// ---------------------------------
@@ -81,14 +83,15 @@ module sisc (
 		pc_sel,
 		ir_load,
 		mm_sel,
-		dm_we
+		dm_we,
+		rb_sel
 	);
 
 	// register file
 	rf u2 (
 		clk,
 		rs,
-		rt,
+		rb,
 		rd,
 		wb_data,
 		rf_we,
@@ -166,9 +169,17 @@ module sisc (
 		read_data
 	);
 
+	mux4 u12 (
+		rt,
+		rd,
+		rb_sel,
+		rb
+	);
+
 	mux16 u13 (
-		alu_out,
+		alu_out, // Might need to be 16 instead of 32 bits
 		imm,
+		mm_sel,
 		mux16_out
 	);
 

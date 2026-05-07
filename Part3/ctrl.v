@@ -3,7 +3,7 @@
 
 `timescale 1ns/100ps
 
-module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst, pc_write, pc_sel, ir_load, mm_sel, dm_we);
+module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst, pc_write, pc_sel, ir_load, mm_sel, dm_we, rb_sel);
 
 	input clk, rst_f;
 	input [3:0] opcode, mm, stat;
@@ -16,6 +16,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 	output reg ir_load;
 	output reg mm_sel;
 	output reg dm_we;
+	output reg rb_sel;
 
 	assign pc_rst = ~rst_f; // pc_rst is the inverse of rst_f
   
@@ -81,6 +82,9 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 		rf_we    = 0;
 		alu_op   = 4'b0000;
 		wb_sel   = 0;
+		mm_sel   = 0;
+		dm_we    = 0;
+		rb_sel   = 0;
 
 		case (present_state)
 
@@ -139,20 +143,28 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 			mem:
 			begin
 				case (opcode)
-					REG_OP:			alu_op = 4'b0000;
-					REG_IM:			alu_op = 4'b0010;
-					default:		alu_op = 4'b0000;
+					REG_OP:		alu_op = 4'b0000;
+					REG_IM:		alu_op = 4'b0010;
+					LOD:		mm_sel = mm[3];
+					STR:
+					begin
+						dm_we = 1;
+						mm_sel = mm[3];
+						rb_sel = 1;
+					end
+					default:	alu_op = 4'b0000;
 				endcase
 			end
 
 			execute:
 			begin
 				case (opcode)
-					NOOP:     alu_op = 4'b0000;
-					REG_OP:   alu_op = 4'b0001;
-					REG_IM:   alu_op = 4'b0011;
-
-					default:  alu_op = 4'b0000;
+					NOOP:     	alu_op = 4'b0000;
+					REG_OP:   	alu_op = 4'b0001;
+					REG_IM:   	alu_op = 4'b0011;
+					LOD:		alu_op = 4'b0010;
+					STR:		alu_op = 4'b0010;
+					default:  	alu_op = 4'b0000;
 				endcase
 			end
 
@@ -160,6 +172,11 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 			begin
 				case (opcode)
 					REG_OP,REG_IM:	rf_we = 1'b1;
+					LOD:
+					begin
+						rf_we = 1;
+						wb_sel = 1;
+					end
 					default:
 					begin 
 						rf_we = 1'b0;
