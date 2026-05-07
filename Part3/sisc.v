@@ -177,7 +177,7 @@ module sisc (
 	);
 
 	mux16 u13 (
-		alu_out, // Might need to be 16 instead of 32 bits
+		alu_out[15:0], // Might need to be 16 instead of 32 bits
 		imm,
 		mm_sel,
 		mux16_out

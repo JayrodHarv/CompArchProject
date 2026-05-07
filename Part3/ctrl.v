@@ -71,7 +71,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 		endcase
 	end
 
-	always @(present_state, opcode)
+	always @(*)
 	begin
 
 		// Defaults (set everything to zero)
@@ -130,6 +130,11 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 						pc_write = 1;
 						br_sel = 0;
 					end
+
+					STR:
+					begin
+						rb_sel = 1;
+					end
 					
 					default:
 					begin
@@ -145,11 +150,15 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 				case (opcode)
 					REG_OP:		alu_op = 4'b0000;
 					REG_IM:		alu_op = 4'b0010;
-					LOD:		mm_sel = mm[3];
+					LOD: 
+					begin
+						// alu_op = 4'b0100;
+						mm_sel = 1;
+					end		
 					STR:
 					begin
 						dm_we = 1;
-						mm_sel = mm[3];
+						mm_sel = 1;
 						rb_sel = 1;
 					end
 					default:	alu_op = 4'b0000;
@@ -164,6 +173,10 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 					REG_IM:   	alu_op = 4'b0011;
 					LOD:		alu_op = 4'b0010;
 					STR:		alu_op = 4'b0010;
+					SWAP:
+					begin
+						alu_op = 4'b1110;
+					end
 					default:  	alu_op = 4'b0000;
 				endcase
 			end
@@ -176,6 +189,11 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 					begin
 						rf_we = 1;
 						wb_sel = 1;
+					end
+					SWAP:
+					begin
+						rf_we = 1;
+						wb_sel = 0;
 					end
 					default:
 					begin 
