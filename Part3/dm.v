@@ -34,7 +34,9 @@ module dm (read_addr, write_addr, write_data, dm_we, read_data);
  
   // load data
   initial begin : prog_load
-    $readmemh("dmem.data",ram_array);
+    // $readmemh("dmem.data",ram_array);
+    // $readmemh("sort_data.data",ram_array);
+    $readmemh("mult_data.data",ram_array);
   end
 
   // read process is sensitive to read address.

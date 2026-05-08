@@ -92,7 +92,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 			begin
 				ir_load  = 1;
 				pc_write = 1;
-				// pc_sel   = 0;
+				pc_sel   = 0;
 			end
 
 			decode:
