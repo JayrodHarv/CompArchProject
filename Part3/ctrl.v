@@ -216,12 +216,12 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 
 	// Halt on HLT instruction
 	
-	always @ (opcode)
-	begin
-		if (opcode == HLT)
-		begin 
-		#5 $display ("Halt."); //Delay 5 ns so $monitor will print the halt instruction
-		$stop;
-		end
-	end
+	// always @ (opcode)
+	// begin
+	// 	if (opcode == HLT)
+	// 	begin 
+	// 	#5 $display ("Halt."); //Delay 5 ns so $monitor will print the halt instruction
+	// 	$stop;
+	// 	end
+	// end
 endmodule

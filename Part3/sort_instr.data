@@ -1,163 +1,169 @@
 // ECE:3350 SISC processor project
 // Bubble Sort instruction memory
 //
-// Instruction encodings:
-//   REG_OP (op=1): [0001|mff[3:0]|rd[3:0]|rs[3:0]|rt[3:0]|00000000|funct[3:0]]
-//   REG_IM (op=2): [0010|mff[3:0]|rd[3:0]|rs[3:0]|imm[15:0]]
-//   LOD    (op=A): [1010|mff[3:0]|rd[3:0]|rs[3:0]|imm[15:0]]
-//   STR    (op=B): [1011|mff[3:0]|rt[3:0]|rs[3:0]|imm[15:0]]  (rs=base, rt=data)
-//   BRA    (op=4): [0100|mm[3:0]|0000|0000|target[15:0]]  branch if (mm & stat) != 0
-//   BNE    (op=6): [0110|mm[3:0]|0000|0000|target[15:0]]  branch if (mm & stat) == 0
-//   HLT    (op=F): [1111|0000|0000|0000|0000000000000000]
+// ISA Reference (from spec):
+//   Format 1: [opcode(4)|MFF(4)|Rd(4)|Rs(4)|Rt(4)|000000000000]  -- REG_OP
+//   Format 2: [opcode(4)|MFF(4)|Rd(4)|Rs(4)|imm(16)]             -- REG_IM / LOD / STR
+//   Format 3: [opcode(4)|CC(4) |unused(8)  |target(16)]          -- branches
 //
-// funct codes for REG_OP: ADD=0, SUB=1, AND=2, OR=3, XOR=4, NOT=5, LSL=6, LSR=7
-// stat bits: [3]=C [2]=N [1]=Z [0]=V
+//   REG_OP opcodes (op=0x1), MFF = funct:
+//     ADD=0x1, SUB=0x2, ADC=0x3, NOT=0x4, OR=0x5, AND=0x6, XOR=0x7
+//     ROR=0x8, ROL=0x9, SHR=0xA, SHL=0xB, RRC=0xC, RLC=0xD, ASR=0xE, ASL=0xF
+//
+//   REG_IM opcodes (op=0x2), MFF = funct:
+//     ADI=0x1, SBI=0x2, ACI=0x3, NTI=0x4, ORI=0x5, ANI=0x6, XRI=0x7
+//     RORI=0x8, ROLI=0x9, SHRI=0xA, SHLI=0xB, RRCI=0xC, RLCI=0xD, ASRI=0xE, ASLI=0xF
+//
+//   Load/Store (op=0xA / 0xB):
+//     LDA: op=A MFF=0  Rd<-Mem[imm]
+//     LDX: op=A MFF=8  Rd<-Mem[Rs+imm]
+//     STA: op=B MFF=0  Mem[imm]<-Rd
+//     STX: op=B MFF=8  Mem[Rs+imm]<-Rd
+//
+//   Branches (op=0x4..0x7):
+//     BRA: branch if (CC & stat) != 0
+//     BNE: branch if (CC & stat) == 0  -- BNE CC=0000 is UNCONDITIONAL
+//
+//   stat bits: [3]=C  [2]=V  [1]=N  [0]=Z
+//
+// Pseudo-instructions used:
+//   LRI Rd, imm  =>  ADI Rd, R0, imm   (load register with sign-extended immediate)
+//   CLR Rd       =>  ADD Rd, R0, R0    (clear register to 0)
+//   INC Rd       =>  ADI Rd, Rd, 1
+//   DEC Rd       =>  ADI Rd, Rd, 0xFFFF
 //
 // Register assignments:
-//   R0  = 0  (never written)
-//   R1  = N  (array length, mem[0])
-//   R2  = outer pass limit (N-1 initially, decremented each outer pass)
-//   R3  = j  (inner index, 0..R2-1)
-//   R4  = arr[j]
-//   R5  = arr[j+1]
-//   R6  = scratch (comparisons)
-//   R7  = constant 1
-//   R8  = address of arr[j]   = 1 + j
-//   R9  = address of arr[j+1] = R8 + 1
+//   R0  = 0 (never written)
+//   R1  = N (array length, from Mem[0])
+//   R2  = outer bound (starts N-1, decremented each outer pass)
+//   R3  = j, inner loop index
+//   R4  = arr[j],   loaded from Mem[R5+0]
+//   R5  = address of arr[j]   = j + 1  (base 1, since arr starts at Mem[1])
+//   R6  = arr[j+1], loaded from Mem[R5+1]
+//   R7  = scratch for comparisons / temp
 //
 // Algorithm:
-//   R2 = N - 1                          // outer pass limit
-//   while R2 > 0:                        // outer loop
-//     R3 = 0                             // j = 0
-//     while R3 < R2:                     // inner loop
-//       load arr[j], arr[j+1]
-//       if arr[j] > arr[j+1]: swap them
-//       j++
-//     R2--
-//
-// Memory layout (sort_data.data):
-//   mem[0] = N = 6
-//   mem[1..6] = [5, -2, 18, 10, 0, -7]
+//   R1 = Mem[0]       (N)
+//   R2 = N - 1        (outer bound)
+//   outer: if R2 == 0 goto done
+//     R3 = 0          (j = 0)
+//     inner: if R3 >= R2 goto outer_end
+//       R5 = R3 + 1               (address of arr[j])
+//       R4 = Mem[R5 + 0]          (arr[j])
+//       R6 = Mem[R5 + 1]          (arr[j+1])
+//       R7 = R4 - R6
+//       if R7 <= 0 goto no_swap   (arr[j] <= arr[j+1], already ordered)
+//       Mem[R5 + 0] = R6          (swap)
+//       Mem[R5 + 1] = R4
+//       no_swap:
+//       R3 = R3 + 1               (j++)
+//       goto inner
+//     outer_end:
+//     R2 = R2 - 1
+//     goto outer
+//   done: HLT
 //
 // ---- Program ----
 //
-// :00  R1 = mem[0]    load N
-//      LOD R1, R0, 0
+// :00  R1 = Mem[0]    -- LDA R1, 0 : load N
+//      op=A MFF=0 Rd=1 Rs=0 imm=0000
 //      1010 0000 0001 0000 0000000000000000
 A0100000
-// :01  R7 = 1         constant 1
-//      REG_IM R7, R0, 1
-//      0010 0000 0111 0000 0000000000000001
-20700001
-// :02  R2 = R1 - R7   outer limit = N - 1
-//      REG_OP R2, R1, R7, SUB   funct=1
-//      0001 0000 0010 0001 0111 00000000 0001
-10217001
 //
-// === OUTER LOOP: :03 ===
-// Check R2 > 0 before inner loop. Use R6 = R2 - R7 then check N or Z.
-// Actually simpler: check at bottom. Enter inner loop unconditionally,
-// but first guard: if R2 == 0 we are done. Check here.
-// :03  R6 = R2 - R0   test R2 == 0 (Z set means done)
-//      REG_OP R6, R2, R0, SUB   funct=1
-//      0001 0000 0110 0010 0000 00000000 0001
-10620001
-// :04  BRA if Z set (R2 == 0) => halt at :12
-//      BRA mm=0010 (Z bit), target=0012
-//      0100 0010 0000 0000 0000000000010010
-42000012
-// :05  R3 = 0         j = 0
-//      REG_IM R3, R0, 0
-//      0010 0000 0011 0000 0000000000000000
-20300000
+// :01  R2 = R1 - 1    -- SBI R2, R1, 1 : outer bound = N-1
+//      op=2 MFF=2 Rd=2 Rs=1 imm=0001
+//      0010 0010 0010 0001 0000000000000001
+22210001
 //
-// === INNER LOOP: :06 ===
-// :06  R6 = R2 - R3   test j < R2, i.e. (R2 - R3) > 0
-//      When R3 == R2, Z is set => inner loop done
-//      REG_OP R6, R2, R3, SUB   funct=1
-//      0001 0000 0110 0010 0011 00000000 0001
-10623001
-// :07  BRA if Z set (R3 == R2) => inner loop done, jump to :10
-//      BRA mm=0010 (Z bit), target=0010
-//      0100 0010 0000 0000 0000000000010000
-42000010
-// :08  R8 = R7 + R3   addr of arr[j] = 1 + j
-//      REG_OP R8, R7, R3, ADD   funct=0
-//      0001 0000 1000 0111 0011 00000000 0000
-10873000
-// :09  R9 = R8 + R7   addr of arr[j+1]
-//      REG_OP R9, R8, R7, ADD   funct=0
-//      0001 0000 1001 1000 0111 00000000 0000
-10987000
-// :0A  R4 = mem[R8]   load arr[j]
-//      LOD R4, R8, 0
-//      1010 0000 0100 1000 0000000000000000
-A0480000
-// :0B  R5 = mem[R9]   load arr[j+1]
-//      LOD R5, R9, 0
-//      1010 0000 0101 1001 0000000000000000
-A0590000
-// :0C  R6 = R4 - R5   compare arr[j] vs arr[j+1]
-//      N flag set  => arr[j] < arr[j+1]  (already in order, skip swap)
-//      N flag clear and Z clear => arr[j] > arr[j+1] (need swap)
-//      REG_OP R6, R4, R5, SUB   funct=1
-//      0001 0000 0110 0100 0101 00000000 0001
-10645001
-// :0D  BRA if N set (arr[j] < arr[j+1]) => in order, skip swap, jump to :10 (j++)
-//      BRA mm=0100 (N bit), target=0010
-//      0100 0100 0000 0000 0000000000010000
-44000010
-// :0E  STR arr[j] <- R5  (write smaller value to lower address)
-//      STR R5, R8, 0
-//      1011 0000 0101 1000 0000000000000000
-B0580000
-// :0F  STR arr[j+1] <- R4  (write larger value to higher address)
-//      STR R4, R9, 0
-//      1011 0000 0100 1001 0000000000000000
-B0490000
-// :10  R3 = R3 + R7   j++
-//      REG_OP R3, R3, R7, ADD   funct=0
-//      0001 0000 0011 0011 0111 00000000 0000
-10337000
-// :11  jump back to inner loop check
-//      BNE mm=0001 (V bit — always clear for normal ops => always branch)
-//      Actually: use BRA on Z bit, but Z is unknown here. Safest unconditional
-//      jump: BNE with mm=0000 never branches. Use BNE mm=1111, since after j++
-//      at least one stat bit will be set... No — use a known-clear flag.
-//      Best unconditional jump on this ISA: after R3=R3+R7 above, check a
-//      condition that is always true. Instead, just re-examine at :06 naturally.
-//      Use: REG_IM R6, R0, 0  (sets Z=1, N=0, C=0, V=0) then BNE mm=1110
-//      to jump when N|C|V == 0 (which after loading 0 they always are... but Z=1
-//      so 1110 & stat = 1110 & 0010 = 0010 != 0 => BRA would branch).
-//      Simpler: do the j<R2 compare again here, skip back if not zero.
-//      We redo the subtract R2-R3 to check: if result > 0 (N=0, Z=0), loop.
-//      R6 = R2 - R3
-//      REG_OP R6, R2, R3, SUB   funct=1
-10623001
-// :12  BNE if Z clear AND N clear (R3 < R2 still) => back to :08
-//      After R3 = R2 - R7 + R7 = R2, Z is set => no branch => falls through.
-//      BNE on Z: branch if Z clear (R3 != R2) back to :08
-//      BNE mm=0010 (Z bit), target=0008
-//      0110 0010 0000 0000 0000000000001000
-62000008
+// OUTER LOOP CHECK: :02
+// :02  R7 = R2 - R2   sets Z if R2==0... better: compare R2 directly.
+//      Use: R7 = R0 - R2 via SUB; if Z set (R2==0) branch to HLT
+//      SUB R7, R0, R2 => op=1 MFF=2 Rd=7 Rs=0 Rt=2
+//      0001 0010 0111 0000 0010 000000000000
+12702000
 //
-// === END INNER LOOP ===
-// :13  R2 = R2 - R7   outer limit-- (i++)
-//      REG_OP R2, R2, R7, SUB   funct=1
-//      0001 0000 0010 0010 0111 00000000 0001
-10227001
-// :14  jump back to outer loop check at :03
-//      Use same always-branch trick: R6 = R2 - R2 sets Z=1.
-//      BNE on N (never set after identical subtract) => never branches.
-//      Instead: unconditional via REG_IM that clears N, then BNE Z => branch
-//      since Z will be set by R2-R2=0... complicated.
-//      Clean solution: BNE on Z after a REG_IM R6, R0, 1 (Z=0 always).
-//      REG_IM R6, R0, 1   -- this sets stat based on value 1: Z=0, N=0
-//      0010 0000 0110 0000 0000000000000001
-20600001
-// :15  BNE mm=0010 (Z bit): since Z=0 after loading 1, always branches => goto :03
-//      0110 0010 0000 0000 0000000000000011
-62000003
+// :03  BRA if Z set (R2==0) => done. Jump to :12 (HLT)
+//      stat[0]=Z. CC=0001 => branch if Z set.
+//      BRA op=4 CC=0001 target=0012
+//      0100 0001 0000 0000 0000000000010010
+41000012
 //
-// :16  HLT
+// :04  R3 = 0          -- CLR R3 : j = 0
+//      ADD R3, R0, R0 => op=1 MFF=1 Rd=3 Rs=0 Rt=0
+//      0001 0001 0011 0000 0000 000000000000
+11300000
+//
+// INNER LOOP CHECK: :05
+// :05  R7 = R2 - R3    -- compare outer bound vs j; Z set if R3==R2
+//      SUB R7, R2, R3 => op=1 MFF=2 Rd=7 Rs=2 Rt=3
+//      0001 0010 0111 0010 0011 000000000000
+12723000
+//
+// :06  BRA if Z set (j==R2) => inner loop done, jump to outer_end :10
+//      BRA CC=0001 target=0010
+//      0100 0001 0000 0000 0000000000010000
+41000010
+//
+// :07  R5 = R3 + 1     -- address of arr[j] = j + 1
+//      ADI R5, R3, 1 => op=2 MFF=1 Rd=5 Rs=3 imm=0001
+//      0010 0001 0101 0011 0000000000000001
+21530001
+//
+// :08  R4 = Mem[R5+0]  -- load arr[j]
+//      LDX R4, R5, 0 => op=A MFF=8 Rd=4 Rs=5 imm=0000
+//      1010 1000 0100 0101 0000000000000000
+A8450000
+//
+// :09  R6 = Mem[R5+1]  -- load arr[j+1]
+//      LDX R6, R5, 1 => op=A MFF=8 Rd=6 Rs=5 imm=0001
+//      1010 1000 0110 0101 0000000000000001
+A8650001
+//
+// :0A  R7 = R4 - R6    -- compare arr[j] vs arr[j+1]
+//      N set (stat[1]) if result negative => arr[j] < arr[j+1] => in order
+//      Z set (stat[0]) if equal => in order
+//      SUB R7, R4, R6 => op=1 MFF=2 Rd=7 Rs=4 Rt=6
+//      0001 0010 0111 0100 0110 000000000000
+12746000
+//
+// :0B  BRA if N set OR Z set (arr[j] <= arr[j+1]) => no swap, jump to :0E
+//      CC=0011 (bits for N=bit1 and Z=bit0)
+//      stat[1]=N, stat[0]=Z => CC=0011 tests both
+//      BRA CC=0011 target=000E
+//      0100 0011 0000 0000 0000000000001110
+4300000E
+//
+// SWAP:
+// :0C  Mem[R5+0] = R6  -- write arr[j+1] value into arr[j] slot
+//      STX R6, R5, 0 => op=B MFF=8 Rd=6 Rs=5 imm=0000
+//      1011 1000 0110 0101 0000000000000000
+B8650000
+//
+// :0D  Mem[R5+1] = R4  -- write arr[j] value into arr[j+1] slot
+//      STX R4, R5, 1 => op=B MFF=8 Rd=4 Rs=5 imm=0001
+//      1011 1000 0100 0101 0000000000000001
+B8450001
+//
+// :0E  R3 = R3 + 1     -- j++
+//      ADI R3, R3, 1 => op=2 MFF=1 Rd=3 Rs=3 imm=0001
+//      0010 0001 0011 0011 0000000000000001
+21330001
+//
+// :0F  jump back to inner loop check at :05
+//      BNE CC=0000 (unconditional) target=0005
+//      0110 0000 0000 0000 0000000000000101
+60000005
+//
+// outer_end: :10
+// :10  R2 = R2 - 1     -- DEC R2
+//      ADI R2, R2, 0xFFFF => op=2 MFF=1 Rd=2 Rs=2 imm=FFFF
+//      0010 0001 0010 0010 1111111111111111
+2122FFFF
+//
+// :11  jump back to outer loop check at :02
+//      BNE CC=0000 (unconditional) target=0002
+//      0110 0000 0000 0000 0000000000000010
+60000002
+//
+// :12  HLT
 F0000000

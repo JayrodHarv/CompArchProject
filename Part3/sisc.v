@@ -183,10 +183,10 @@ module sisc (
 		mux16_out
 	);
 
-	initial begin
-		$monitor("Time = %0d IR = %h PC = %h R1 = %h R2 = %h R3 = %h R4 = %h R5 = %h ALU_OP = %h BR_SEL = %b PC_WRITE = %b PC_SEL = %b",
-			$time, instr, pc_out, u2.ram_array[1], u2.ram_array[2], u2.ram_array[3], u2.ram_array[4], u2.ram_array[5], alu_op, br_sel, pc_write, pc_sel
-		);
+	// initial begin
+	// 	$monitor("Time = %0d IR = %h PC = %h R1 = %h R2 = %h R3 = %h R4 = %h R5 = %h ALU_OP = %h BR_SEL = %b PC_WRITE = %b PC_SEL = %b",
+	// 		$time, instr, pc_out, u2.ram_array[1], u2.ram_array[2], u2.ram_array[3], u2.ram_array[4], u2.ram_array[5], alu_op, br_sel, pc_write, pc_sel
+	// 	);
 //     $monitor(
 //         "| Time=%0d | \n\
 // | PC=%h | PC_SEL=%b | PC_WRITE=%b | STAT=%b | BR_SEL=%b | BR_ADDR=%h | \n\
@@ -198,5 +198,5 @@ module sisc (
 //           rf0.ram_array[1], rf0.ram_array[2], rf0.ram_array[3], rf0.ram_array[4], rf0.ram_array[5], rf_we,
 //           alu_op
 //     );
-end
+// end
 endmodule
