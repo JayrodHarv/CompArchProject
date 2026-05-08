@@ -61,7 +61,7 @@ module sisc (
 	wire [3:0] funct		= instr[3:0];		// ALU function code
 
 	wire [15:0]	imm			= instr[15:0];		// Immediate Value
-	wire [15:0] target		= instr[15:0];		// Memory Address 	  	
+	wire [15:0] target		= instr[15:0];		// Memory Address
 
 	// ---------------------------------
 	// component instantiation goes here
@@ -105,7 +105,7 @@ module sisc (
 		rsa,
 		rsb,
 		imm,
-		cc[3],  // carry in from status register
+		stat[3],  // carry in from status register
 		alu_op,
 		mff,
 		alu_out,
@@ -177,7 +177,7 @@ module sisc (
 	);
 
 	mux16 u13 (
-		alu_out[15:0], // Might need to be 16 instead of 32 bits
+		alu_out[15:0], // Memory address
 		imm,
 		mm_sel,
 		mux16_out

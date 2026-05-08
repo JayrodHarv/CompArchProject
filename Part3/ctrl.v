@@ -92,7 +92,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 			begin
 				ir_load  = 1;
 				pc_write = 1;
-				pc_sel   = 0;
+				// pc_sel   = 0;
 			end
 
 			decode:
@@ -131,10 +131,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 						br_sel = 0;
 					end
 
-					STR:
-					begin
-						rb_sel = 1;
-					end
+					STR:	rb_sel = 1;
 					
 					default:
 					begin
@@ -145,50 +142,61 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 				endcase
 			end
 
-			mem:
-			begin
-				case (opcode)
-					REG_OP:		alu_op = 4'b0000;
-					REG_IM:		alu_op = 4'b0010;
-					LOD: 
-					begin
-						// alu_op = 4'b0100;
-						mm_sel = 1;
-					end		
-					STR:
-					begin
-						dm_we = 1;
-						mm_sel = 1;
-						rb_sel = 1;
-					end
-					default:	alu_op = 4'b0000;
-				endcase
-			end
-
 			execute:
 			begin
 				case (opcode)
 					NOOP:     	alu_op = 4'b0000;
 					REG_OP:   	alu_op = 4'b0001;
 					REG_IM:   	alu_op = 4'b0011;
-					LOD:		alu_op = 4'b0010;
-					STR:		alu_op = 4'b0010;
-					SWAP:
+					LOD:
 					begin
-						alu_op = 4'b1110;
+						alu_op = 4'b0100;
+						mm_sel = 0;
+					end
+					
+					STR:
+					begin
+						alu_op = 4'b0100;
+						rb_sel = 1;
+						mm_sel = 0;
 					end
 					default:  	alu_op = 4'b0000;
+				endcase
+			end
+
+			mem:
+			begin
+				case (opcode)
+					REG_OP:		alu_op = 4'b0000;
+					REG_IM:		alu_op = 4'b0010;
+					LOD:
+					begin
+						alu_op = 4'b0100;
+						mm_sel = 0;
+					end
+					STR:
+					begin
+						mm_sel = 0;
+						rb_sel = 1;
+						dm_we = 1;
+					end
+					default:	alu_op = 4'b0000;
 				endcase
 			end
 
 			writeback:
 			begin
 				case (opcode)
-					REG_OP,REG_IM:	rf_we = 1'b1;
+					REG_OP,REG_IM:	
+					begin
+						rf_we = 1;
+						wb_sel = 0;
+					end
 					LOD:
 					begin
 						rf_we = 1;
 						wb_sel = 1;
+						mm_sel = 0;
 					end
 					SWAP:
 					begin
@@ -196,7 +204,7 @@ module ctrl (clk, rst_f, opcode, mm, stat, rf_we, alu_op, wb_sel, br_sel, pc_rst
 						wb_sel = 0;
 					end
 					default:
-					begin 
+					begin
 						rf_we = 1'b0;
 						wb_sel = 1'b0;
 						alu_op = 4'b0000;
